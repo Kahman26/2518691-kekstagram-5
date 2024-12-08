@@ -18,6 +18,6 @@ const createDescriptionPhoto = () => ({
   comments: Array.from({length: getRandomNumber(0, 30)}, createComments)
 });
 
-const descriptionsPhoto = Array.from({length: DESCRIPTION_COUNT}, createDescriptionPhoto)
+export const generatePhotos = Array.from({length: DESCRIPTION_COUNT}, createDescriptionPhoto)
 
-console.log(descriptionsPhoto);
+console.log(generatePhotos);
