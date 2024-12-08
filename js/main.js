@@ -1,5 +1,6 @@
 import {MESSAGES, DESCRIPTIONS, NAMES, DESCRIPTION_COUNT} from './data.js';
 import {getRandomNumber, getPhotoId, getUrl, getCommentId, getRandomItem} from './util.js';
+import { renderThumbnails } from './rendering.js';
 
 
 const createComments = () => ({
@@ -20,4 +21,4 @@ const createDescriptionPhoto = () => ({
 
 export const generatePhotos = Array.from({length: DESCRIPTION_COUNT}, createDescriptionPhoto)
 
-console.log(generatePhotos);
+renderThumbnails(generatePhotos);
