@@ -1,6 +1,8 @@
 import {MESSAGES, DESCRIPTIONS, NAMES, DESCRIPTION_COUNT} from './data.js';
 import {getRandomNumber, getPhotoId, getUrl, getCommentId, getRandomItem} from './util.js';
-import { renderThumbnails } from './rendering.js';
+import { renderThumbnails } from './thumbnails.js';
+import './form.js';
+import { initForm } from './form.js';
 
 
 const createComments = () => ({
@@ -21,4 +23,8 @@ const createDescriptionPhoto = () => ({
 
 export const generatePhotos = Array.from({length: DESCRIPTION_COUNT}, createDescriptionPhoto)
 
-renderThumbnails(generatePhotos);
+export const photos = generatePhotos;
+renderThumbnails(photos);
+initForm(photos, renderThumbnails);
+
+

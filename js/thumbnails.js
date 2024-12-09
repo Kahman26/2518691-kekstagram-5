@@ -9,24 +9,21 @@ function createThumbnail(photoData) {
   const img = thumbnail.querySelector('.picture__img');
   img.src = photoData.url;
   img.alt = photoData.description;
-
   thumbnail.querySelector('.picture__likes').textContent = photoData.likes;
   thumbnail.querySelector('.picture__comments').textContent = photoData.comments.length;
-
-  thumbnail.addEventListener('click', () => {
-    openBigPicture(photoData);
+  // Открытие полноразмерного изображения при клике
+  thumbnail.addEventListener('click', function () {
+    openBigPicture(photoData); // Открываем большое изображение
   });
-
   return thumbnail;
 }
 
-
 function renderThumbnails(data) {
   const fragment = document.createDocumentFragment();
-  data.forEach(photoData => {
-    const thumbnail = createThumbnail(photoData);
+  for (let i = 0; i < data.length; i++) {
+    const thumbnail = createThumbnail(data[i]);
     fragment.appendChild(thumbnail);
-  });
+  }
   picturesContainer.appendChild(fragment);
 }
 
