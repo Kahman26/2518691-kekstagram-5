@@ -1,7 +1,6 @@
 import {MESSAGES, DESCRIPTIONS, NAMES, DESCRIPTION_COUNT} from './data.js';
 import {getRandomNumber, getPhotoId, getUrl, getCommentId, getRandomItem} from './util.js';
 import { renderThumbnails } from './thumbnails.js';
-import './form.js';
 import { initForm } from './form.js';
 
 

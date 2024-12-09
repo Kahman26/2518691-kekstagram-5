@@ -48,6 +48,13 @@ function openBigPicture(photoData) {
 
   socialComments.innerHTML = '';
 
+  imageElement.className = '';
+
+  // Применение эффекта, если он есть
+  if (photoData.effect && photoData.effect !== 'none') {
+    imageElement.classList.add(`effects__preview--${photoData.effect}`);
+  }
+
   currentComments = photoData.comments;
   displayedCommentsCount = 0;
 
