@@ -1,29 +1,26 @@
-import {MESSAGES, DESCRIPTIONS, NAMES, DESCRIPTION_COUNT} from './data.js';
-import {getRandomNumber, getPhotoId, getUrl, getCommentId, getRandomItem} from './util.js';
+import { getData } from './api.js';
 import { renderThumbnails } from './thumbnails.js';
 import { initForm } from './form.js';
 
+const photos = [];
 
-const createComments = () => ({
-  id: getCommentId(),
-  avatar: `img/avatar-${getRandomNumber(1, 6)}.svg`,
-  message: getRandomItem(MESSAGES),
-  name: getRandomItem(NAMES)
-});
+getData()
+  .then((data) => {
+    photos.push(...data); // Загружаем данные в массив
+    renderThumbnails(photos); // Отрисовываем миниатюры
+  })
+  .catch((error) => {
+    console.error('Ошибка загрузки данных:', error);
+    // Показать сообщение об ошибке пользователю
+    const errorBlock = document.createElement('div');
+    errorBlock.textContent = 'Не удалось загрузить фотографии. Попробуйте позже.';
+    errorBlock.style.cssText = `
+      color: red;
+      text-align: center;
+      font-size: 20px;
+      margin-top: 20px;
+    `;
+    document.body.appendChild(errorBlock);
+  });
 
-
-const createDescriptionPhoto = () => ({
-  id: getPhotoId(),
-  url: `photos/${getUrl()}.jpg`,
-  description: getRandomItem(DESCRIPTIONS),
-  likes: getRandomNumber(15, 200),
-  comments: Array.from({length: getRandomNumber(0, 30)}, createComments)
-});
-
-export const generatePhotos = Array.from({length: DESCRIPTION_COUNT}, createDescriptionPhoto)
-
-export const photos = generatePhotos;
-renderThumbnails(photos);
 initForm(photos, renderThumbnails);
-
-
