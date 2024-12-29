@@ -1,110 +1,224 @@
-export function initForm(photos, renderThumbnails) {
-  const uploadForm = document.querySelector('.img-upload__form');
-  if (!uploadForm) {
-    console.error('Форма загрузки не найдена');
-    return;
-  }
+import { sendData } from './api.js';
 
+function resetForm() {
+  const uploadForm = document.querySelector('.img-upload__form');
   const fileInput = uploadForm.querySelector('.img-upload__input');
+  const hashtagsInput = uploadForm.querySelector('.text__hashtags');
+  const descriptionInput = uploadForm.querySelector('.text__description');
   const uploadOverlay = document.querySelector('.img-upload__overlay');
   const previewImage = uploadOverlay.querySelector('.img-upload__preview img');
-  const closeButton = uploadOverlay.querySelector('.img-upload__cancel');
+  const effectLevelSlider = document.querySelector('.effect-level__slider');
+  const scaleControlValue = document.querySelector('.scale__control--value');
+  const submitButton = uploadForm.querySelector('.img-upload__submit');
 
-  const effectRadios = document.querySelectorAll('input[name="effect"]');
+  // Сброс состояния формы
+  uploadForm.reset();
+  previewImage.src = '';
+  hashtagsInput.value = '';
+  descriptionInput.value = '';
+  fileInput.value = '';
+  submitButton.disabled = false;
+
+  scaleControlValue.value = '100%';
+  previewImage.style.transform = 'scale(1)'; // Возвращаем начальный размер
+
+  // Сброс состояния ползунка
+  effectLevelSlider.noUiSlider.set(100); // Устанавливаем интенсивность фильтра на максимум
+  effectLevelSlider.classList.add('hidden');
+  document.querySelector('input[name="effect"][value="none"]').checked = true; // Сбрасываем выбранный эффект на "Оригинал"
+  previewImage.className = ''; // Удаляем все классы эффектов
+  previewImage.style.filter = ''; // Сбрасываем фильтр // Прячем ползунок, если фильтр сброшен (без эффекта)
+
+  // Закрытие формы
+  uploadOverlay.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+
+function showMessage(type) {
+  const template = document.querySelector(`#${type}`).content.querySelector(`.${type}`);
+  const messageElement = template.cloneNode(true);
+  document.body.appendChild(messageElement);
+
+  const button = messageElement.querySelector(`.${type}__button`);
+  const onClose = () => {
+    messageElement.remove();
+    document.removeEventListener('keydown', onEscapePress);
+  };
+
+  const onEscapePress = (evt) => {
+    if (evt.key === 'Escape') {
+      onClose();
+    }
+  };
+
+  document.addEventListener('keydown', onEscapePress);
+  button.addEventListener('click', onClose);
+  messageElement.addEventListener('click', (evt) => {
+    if (evt.target === messageElement) {
+      onClose();
+    }
+  });
+}
+
+export function initForm(photos, renderThumbnails) {
+  const uploadForm = document.querySelector('.img-upload__form');
+  const pristine = new Pristine(uploadForm);
+  const fileInput = uploadForm.querySelector('.img-upload__input');
+  const uploadOverlay = document.querySelector('.img-upload__overlay');
+  const closeButton = uploadOverlay.querySelector('.img-upload__cancel');
+  const submitButton = uploadForm.querySelector('.img-upload__submit');
+  const previewImage = uploadOverlay.querySelector('.img-upload__preview img');
   const effectLevelSlider = document.querySelector('.effect-level__slider');
   const effectLevelValue = document.querySelector('.effect-level__value');
+  const effectRadios = document.querySelectorAll('input[name="effect"]');
 
   let currentEffect = 'none';
 
-
+  // Инициализация ползунка noUiSlider
   noUiSlider.create(effectLevelSlider, {
     range: {
       min: 0,
       max: 100,
     },
-    start: 0,
+    start: 100,
     step: 1,
     connect: 'lower',
   });
 
-  // Применение эффекта к изображению
+  effectLevelSlider.classList.add('hidden'); // Прячем слайдер по умолчанию
+  document.querySelector('input[name="effect"][value="none"]').checked = true; // Устанавливаем эффект "Оригинал" по умолчанию
+
+  pristine.addValidator(document.querySelector('.text__hashtags'), function(value) {
+    const hashtags = value.split(' ');
+    const regex = /^#[A-Za-zА-Яа-я0-9]{1,19}$/;
+    // Проверка на уникальность и количество
+    return hashtags.every(tag => regex.test(tag)) && hashtags.length <= 5;
+  }, 'Неверный формат хэш-тега или превышено количество хэш-тегов');
+
+
+  uploadForm.addEventListener('submit', (evt) => {
+    evt.preventDefault();
+    if (!pristine.validate()) {
+      // Ошибки валидации
+      return;
+    }
+    // Валидация пройдена, продолжаем отправку данных
+  });
+
 
   function applyEffect(effect, value) {
-    const imageElement = document.querySelector('.img-upload__preview img');
-    imageElement.className = ''; // Сбрасываем предыдущий класс эффекта
-    previewImage.style.filter = ''; // Сбрасываем фильтр
+    previewImage.className = '';
+    previewImage.style.filter = '';
 
     if (effect !== 'none') {
-      imageElement.classList.add(`effects__preview--${effect}`);
-      const filterValue = value / 100; // Пример нормализации значения слайдера
+      previewImage.classList.add(`effects__preview--${effect}`);
       switch (effect) {
         case 'chrome':
-          previewImage.style.filter = `grayscale(${filterValue})`;
+          previewImage.style.filter = `grayscale(${value / 100})`;
           break;
         case 'sepia':
-          previewImage.style.filter = `sepia(${filterValue})`;
+          previewImage.style.filter = `sepia(${value / 100})`;
           break;
         case 'marvin':
-          previewImage.style.filter = `invert(${filterValue * 100}%)`;
+          previewImage.style.filter = `invert(${value}%)`;
           break;
         case 'phobos':
-          previewImage.style.filter = `blur(${filterValue * 3}px)`;
+          previewImage.style.filter = `blur(${(value / 100) * 3}px)`;
           break;
         case 'heat':
-          previewImage.style.filter = `brightness(${1 + filterValue * 2})`;
+          previewImage.style.filter = `brightness(${1 + (value / 100) * 2})`;
           break;
       }
     }
   }
 
-  // Обновление слайдера при переключении фильтра
   function updateSlider(effect) {
     if (effect === 'none') {
       effectLevelSlider.classList.add('hidden');
       effectLevelValue.value = '';
       previewImage.style.filter = '';
+      previewImage.className = '';
     } else {
       effectLevelSlider.classList.remove('hidden');
       effectLevelSlider.noUiSlider.updateOptions({
         range: { min: 0, max: 100 },
-        start: 0, // Сброс значения слайдера в 0
+        start: 100,
       });
-      effectLevelValue.value = 0; // Устанавливаем начальное значение
+      effectLevelValue.value = 100;
     }
   }
 
-
-  // Обработчик переключения фильтров
   effectRadios.forEach((radio) => {
     radio.addEventListener('change', (evt) => {
       currentEffect = evt.target.value;
-      updateSlider(currentEffect); // Сбрасываем слайдер в 0 при смене эффекта
+      updateSlider(currentEffect);
       applyEffect(currentEffect, effectLevelSlider.noUiSlider.get());
     });
   });
 
-
-  // Обновление эффекта при движении слайдера
   effectLevelSlider.noUiSlider.on('update', (values) => {
     const value = Math.round(values[0]);
-    effectLevelValue.value = value; // Записываем значение в скрытое поле
-    applyEffect(currentEffect, value); // Применяем эффект
+    effectLevelValue.value = value;
+    applyEffect(currentEffect, value);
+  });
+
+  uploadForm.addEventListener('submit', async (evt) => {
+    evt.preventDefault();
+    submitButton.disabled = true;
+
+    const formData = new FormData(uploadForm);
+
+    try {
+      await sendData(formData);
+      showMessage('success');
+
+      const filterData = getCurrentFilterData(); // Получаем текущий фильтр
+
+      const newPhotoUrl = URL.createObjectURL(fileInput.files[0]);
+      const newPhoto = {
+        id: photos.length + 1,
+        url: newPhotoUrl,
+        description: uploadForm.querySelector('.text__description').value,
+        likes: 0,
+        comments: [],
+        effect: filterData.effect,
+        intensity: filterData.intensity,
+      };
+
+      photos.push(newPhoto);
+      renderThumbnails([newPhoto]);
+
+      resetForm();
+    } catch (error) {
+      console.error('Ошибка отправки данных:', error);
+      showMessage('error');
+    } finally {
+      submitButton.disabled = false;
+    }
   });
 
 
-  function resetForm() {
-    uploadForm.reset();
-    uploadOverlay.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    fileInput.value = '';
-    previewImage.src = '';
+
+  function getCurrentFilterData() {
+    const effectRadios = document.querySelectorAll('input[name="effect"]');
+    let selectedEffect = 'none';
+
+    // Ищем текущий выбранный эффект
+    effectRadios.forEach((radio) => {
+      if (radio.checked) {
+        selectedEffect = radio.value;
+      }
+    });
+
+    // Получаем значение интенсивности фильтра
+    const effectLevel = effectLevelSlider.noUiSlider ? effectLevelSlider.noUiSlider.get() : 100;
+
+    return {
+      effect: selectedEffect,
+      intensity: selectedEffect === 'none' ? null : effectLevel, // Интенсивность только если выбран фильтр
+    };
   }
 
-  pristine.addValidator(
-    descriptionInput,
-    (value) => value.length <= 140,
-    'Комментарий не должен превышать 140 символов.'
-  );
 
 
   fileInput.addEventListener('change', () => {
@@ -123,19 +237,59 @@ export function initForm(photos, renderThumbnails) {
 
   closeButton.addEventListener('click', resetForm);
 
-  uploadForm.addEventListener('submit', (evt) => {
-    evt.preventDefault();
-    const newPhoto = {
-      id: photos.length + 1,
-      url: URL.createObjectURL(fileInput.files[0]),
-      description: 'Новое фото',
-      likes: 0,
-      comments: []
+
+  function initScaleControls() {
+    const scaleControlValue = document.querySelector('.scale__control--value');
+    const scaleControlMinus = document.querySelector('.scale__control--smaller');
+    const scaleControlPlus = document.querySelector('.scale__control--bigger');
+    const previewImage = document.querySelector('.img-upload__preview img');
+    const SCALE_STEP = 25; // Шаг изменения масштаба
+    const SCALE_MIN = 25;  // Минимальный масштаб
+    const SCALE_MAX = 100; // Максимальный масштаб
+
+    // Обновление масштаба изображения
+    const updateScale = (value) => {
+      scaleControlValue.value = `${value}%`;
+      previewImage.style.transform = `scale(${value / 100})`;
     };
 
-    photos.push(newPhoto);
-    renderThumbnails([newPhoto]);
+    // Уменьшение масштаба
+    scaleControlMinus.addEventListener('click', () => {
+      let currentScale = parseInt(scaleControlValue.value, 10);
+      if (currentScale > SCALE_MIN) {
+        currentScale -= SCALE_STEP;
+        updateScale(currentScale);
+      }
+    });
 
-    resetForm();
+    // Увеличение масштаба
+    scaleControlPlus.addEventListener('click', () => {
+      let currentScale = parseInt(scaleControlValue.value, 10);
+      if (currentScale < SCALE_MAX) {
+        currentScale += SCALE_STEP;
+        updateScale(currentScale);
+      }
+    });
+
+    // Установить масштаб по умолчанию
+    updateScale(100); // Начальный масштаб = 100%
+  }
+
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (file) {
+      const previewImage = document.querySelector('.img-upload__preview img');
+      previewImage.src = URL.createObjectURL(file);
+
+      // Инициализируем управление масштабом
+      initScaleControls();
+
+      // Показываем форму редактирования
+      uploadOverlay.classList.remove('hidden');
+      document.body.classList.add('modal-open');
+    }
   });
+
+
 }
