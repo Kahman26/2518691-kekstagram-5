@@ -12,25 +12,6 @@ const imgFiltersElement = document.querySelector('.img-filters');
 let currentPhotos = []; // Текущие фотографии
 let filteredPhotos = []; // Отфильтрованные фотографии
 
-getData()
-  .then((data) => {
-    photos.push(...data); // Загружаем данные в массив
-    renderThumbnails(photos); // Отрисовываем миниатюры
-  })
-  .catch((error) => {
-    console.error('Ошибка загрузки данных:', error);
-    // Показать сообщение об ошибке пользователю
-    const errorBlock = document.createElement('div');
-    errorBlock.textContent = 'Не удалось загрузить фотографии. Попробуйте позже.';
-    errorBlock.style.cssText = `
-      color: red;
-      text-align: center;
-      font-size: 20px;
-      margin-top: 20px;
-    `;
-    document.body.appendChild(errorBlock);
-  });
-
 const debounce = (callback, delay) => {
   let timeout;
   return (...args) => {
@@ -114,16 +95,27 @@ const initFilters = () => {
 const loadPhotos = async () => {
   try {
     currentPhotos = await getData(); // Загружаем данные
-    filteredPhotos = currentPhotos;
-    renderPhotos(filteredPhotos); // Отрисовываем фотографии
+    filteredPhotos = currentPhotos; // По умолчанию показываем все фотографии
     imgFiltersElement.classList.remove('img-filters--inactive'); // Показываем фильтры
     initFilters(); // Инициализируем фильтры
+    renderThumbnails(filteredPhotos); // Добавляем обработку кликов для отображения фото на весь экран
   } catch (error) {
     console.error('Ошибка загрузки данных:', error);
+    // Показать сообщение об ошибке пользователю
+    const errorBlock = document.createElement('div');
+    errorBlock.textContent = 'Не удалось загрузить фотографии. Попробуйте позже.';
+    errorBlock.style.cssText = `
+      color: red;
+      text-align: center;
+      font-size: 20px;
+      margin-top: 20px;
+    `;
+    document.body.appendChild(errorBlock);
   }
 };
 
 // Загружаем фотографии при старте
 loadPhotos();
 
+// Инициализируем форму
 initForm(photos, renderThumbnails);
