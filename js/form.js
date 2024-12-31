@@ -71,8 +71,54 @@ export function initForm(photos, renderThumbnails) {
   const effectLevelSlider = document.querySelector('.effect-level__slider');
   const effectLevelValue = document.querySelector('.effect-level__value');
   const effectRadios = document.querySelectorAll('input[name="effect"]');
+  const hashtagsInput = uploadForm.querySelector('.text__hashtags');
+  const descriptionInput = uploadForm.querySelector('.text__description');
 
   let currentEffect = 'none';
+
+  // Функция для закрытия формы редактирования
+  const closeUploadOverlay = () => {
+    uploadOverlay.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    resetForm();
+    document.removeEventListener('keydown', onEscapePress);
+  };
+
+  // Закрытие по нажатию на клавишу Esc
+  const onEscapePress = (evt) => {
+    const isInputFocused = document.activeElement === hashtagsInput || document.activeElement === descriptionInput;
+    if (evt.key === 'Escape' && !isInputFocused) {
+      closeUploadOverlay();
+    }
+  };
+
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      const previewImage = document.querySelector('.img-upload__preview img');
+      previewImage.src = imageUrl;
+
+      // Показываем форму редактирования
+      uploadOverlay.classList.remove('hidden');
+      document.body.classList.add('modal-open');
+
+      // Удаляем URL после загрузки изображения
+      previewImage.onload = () => {
+        URL.revokeObjectURL(imageUrl);
+      };
+
+      // Добавляем обработчик на клавишу Esc
+      document.addEventListener('keydown', onEscapePress);
+    }
+  });
+
+  // Закрытие по нажатию на кнопку
+  closeButton.addEventListener('click', closeUploadOverlay);
+
+  // Инициализируем масштабирование
+  initScaleControls();
 
   // Инициализация ползунка noUiSlider
   noUiSlider.create(effectLevelSlider, {
@@ -88,13 +134,20 @@ export function initForm(photos, renderThumbnails) {
   effectLevelSlider.classList.add('hidden'); // Прячем слайдер по умолчанию
   document.querySelector('input[name="effect"][value="none"]').checked = true; // Устанавливаем эффект "Оригинал" по умолчанию
 
-  pristine.addValidator(document.querySelector('.text__hashtags'), function(value) {
-    const hashtags = value.split(' ');
-    const regex = /^#[A-Za-zА-Яа-я0-9]{1,19}$/;
-    // Проверка на уникальность и количество
-    return hashtags.every(tag => regex.test(tag)) && hashtags.length <= 5;
+  pristine.addValidator(hashtagsInput, function(value) {
+    const hashtags = value.trim().toLowerCase().split(' '); // Приводим к нижнему регистру и разделяем
+    const regex = /^#[A-Za-zА-Яа-я0-9]{2,19}$/; // Хэш-тег минимум из 2 символов (включая #)
+    const uniqueHashtags = new Set(hashtags); // Убираем повторяющиеся хэштеги
+
+    // Проверка на длину хэш-тега, количество хэштегов и уникальность
+    return hashtags.every(tag => regex.test(tag)) &&
+           hashtags.length <= 5 &&
+           hashtags.length === uniqueHashtags.size;
   }, 'Неверный формат хэш-тега или превышено количество хэш-тегов');
 
+  pristine.addValidator(descriptionInput, function(value) {
+    return value.length <= 140; // Длина комментария не более 140 символов
+  }, 'Комментарий не может превышать 140 символов');
 
   uploadForm.addEventListener('submit', (evt) => {
     evt.preventDefault();
@@ -198,7 +251,6 @@ export function initForm(photos, renderThumbnails) {
   });
 
 
-
   function getCurrentFilterData() {
     const effectRadios = document.querySelectorAll('input[name="effect"]');
     let selectedEffect = 'none';
@@ -218,7 +270,6 @@ export function initForm(photos, renderThumbnails) {
       intensity: selectedEffect === 'none' ? null : effectLevel, // Интенсивность только если выбран фильтр
     };
   }
-
 
 
   fileInput.addEventListener('change', () => {
@@ -249,26 +300,25 @@ export function initForm(photos, renderThumbnails) {
 
     // Обновление масштаба изображения
     const updateScale = (value) => {
+      if (value < SCALE_MIN) value = SCALE_MIN;
+      if (value > SCALE_MAX) value = SCALE_MAX;
+
       scaleControlValue.value = `${value}%`;
       previewImage.style.transform = `scale(${value / 100})`;
     };
 
     // Уменьшение масштаба
     scaleControlMinus.addEventListener('click', () => {
-      let currentScale = parseInt(scaleControlValue.value, 10);
-      if (currentScale > SCALE_MIN) {
-        currentScale -= SCALE_STEP;
-        updateScale(currentScale);
-      }
+    let currentScale = parseInt(scaleControlValue.value, 10);
+    currentScale -= SCALE_STEP;
+    updateScale(currentScale);
     });
 
     // Увеличение масштаба
     scaleControlPlus.addEventListener('click', () => {
       let currentScale = parseInt(scaleControlValue.value, 10);
-      if (currentScale < SCALE_MAX) {
-        currentScale += SCALE_STEP;
-        updateScale(currentScale);
-      }
+      currentScale += SCALE_STEP;
+      updateScale(currentScale);
     });
 
     // Установить масштаб по умолчанию
@@ -282,14 +332,9 @@ export function initForm(photos, renderThumbnails) {
       const previewImage = document.querySelector('.img-upload__preview img');
       previewImage.src = URL.createObjectURL(file);
 
-      // Инициализируем управление масштабом
-      initScaleControls();
-
       // Показываем форму редактирования
       uploadOverlay.classList.remove('hidden');
       document.body.classList.add('modal-open');
     }
   });
-
-
 }
